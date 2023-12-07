@@ -242,13 +242,12 @@ const simplifyMaps = (str) => {
     listOfArrays.map(arr => {
         ans.push({
             min: arr[1],
-            max: arr[1] + arr[2],
+            max: arr[1] + arr[2] - 1,
             diff: arr[0] - arr[1],
         })
     });
 
-
-    return ans;
+    return ans.sort((a, b) => a.min - b.min);;
 }
 
 const simplifySeeds = (str) => {
@@ -264,99 +263,159 @@ const simplifySeeds = (str) => {
     return newSeeds;
 }
 
-
-const findNewSeedRanges = (seed, ranges) => {
-    var ans = [];
-    for(var i = 0; i < ranges.length; i++) {
-        const range = ranges[i];
-        
-        if(seed.min >= range.min && seed.max <= range.max) {
-            // within the range
-            ans.push({
-                min: seed.min + range.diff,
-                max: seed.max + range.diff,
-            });
-        } else if(seed.min < range.min && seed.max >= range.min && seed.max <= range.max) {
-            // leftside stretched out
-            ans.push({
-                min: seed.min,
-                max: range.min - 1
-            },{
-                min: range.min + range.diff,
-                max: seed.max + range.diff
-            })
-        } else if (seed.min >= range.min && seed.min <= range.max && seed.max > range.max) {
-            // rightside stretched out
-            ans.push({
-                min: seed.min + range.diff,
-                max: range.max + range.diff
-            },
-            {
-                min: range.max + 1,
-                max: seed.max
-            })
-        } else if (seed.min < range.min && seed.max > range.max){
-            // total overalp
-            ans.push({
-                min: seed.min,
-                max: range.min - 1
-            }, {
-                min: range.min + range.diff,
-                max: range.max + range.diff
-            }, {
-                min: range.max + 1,
-                max: seed.max
-            })
-        } else if(i === ranges.length -1 && ans.length === 0) {
-            ans.push(seed)
-        }
+const findMapRange = (map) => {
+    const minList = map.map(range => range.min);
+    const maxList = map.map(range => range.max);
+    return {
+        min: Math.min(...minList),
+        max: Math.max(...maxList)
     }
-    return ans;
+}
+
+const getNewSeed = (seed, range, min, max) => {
+    var ans = [];
+    var newSeeds = [];
+
+    if(seed.min < range.min && seed.max >= range.min && seed.max <= range.max) {
+        // left stretched out
+        console.log(range)
+        console.log('left stretched out')
+        ans.push({
+            min: range.min + range.diff,
+            max: seed.max + range.diff
+        });
+        newSeeds.push({
+            min: seed.min,
+            max: range.min - 1
+        })
+    } else if(seed.min >= range.min && seed.min <= range.max && seed.max > range.max) {
+        // right stretched out
+        console.log(range)
+        console.log('right stretched out')
+        ans.push({
+            min: seed.min + range.diff,
+            max: range.max + range.diff
+        });
+        newSeeds.push({
+            min: range.max + 1,
+            max: seed.max
+        })
+    } else if(seed.min >= range.min && seed.max <= range.max) {
+        // within the range
+        console.log(range)
+        console.log('within the range')
+        ans.push({
+            min: seed.min + range.diff,
+            max: seed.max + range.diff
+        })
+    } else if(seed.min < range.min && seed.max > range.max) {
+        // bigger than range
+        console.log(range)
+        console.log('----bigger than range')
+        ans.push({
+            min: range.min + range.diff,
+            max: range.max + range.diff
+        })
+        newSeeds.push({
+            min: seed.min,
+            max: range.min - 1
+        }, {
+            min: range.max + 1,
+            max: seed.max
+        })
+    } else {
+        console.log(range)
+        newSeeds.push(seed)
+        console.log('no match')
+    }
+
+    return {
+        ans, newSeeds
+    }
 
 }
 
-const findLocation = (seed, maps) => {
+const getNewSeeds = (seedToStart, ranges) => {
     var ans = [];
+    var seeds = [seedToStart]
+    var newSeeds = [];
+    const {min, max} = findMapRange(ranges);
 
-    const newSeeds = findNewSeedRanges(seed, maps[0]);
-    newSeeds.forEach(seed1 => {
-        const newSeeds = findNewSeedRanges(seed1, maps[1]);
-        newSeeds.forEach(seed => {
-            const newSeeds = findNewSeedRanges(seed, maps[2]);
-            newSeeds.forEach(seed => {
-                const newSeeds = findNewSeedRanges(seed, maps[3]);
-                newSeeds.forEach(seed => {
-                    const newSeeds = findNewSeedRanges(seed, maps[4]);
-                    newSeeds.forEach(seed => {
-                        const newSeeds = findNewSeedRanges(seed, maps[5]);
-                        newSeeds.forEach(seed => {
-                            const newSeeds = findNewSeedRanges(seed, maps[6]);
-                            ans.push(...newSeeds);
-                        })
-                    })
-                })
-            })
+    ranges.map((range, index) => {
+        seeds = index === 0 ? seeds : newSeeds;
+        seeds.map(seed => {
+            const newSetOfSeeds = getNewSeed(seed, range, min, max);
+            if(newSetOfSeeds.ans) {
+                ans.push(...newSetOfSeeds.ans)
+            }
+            if(newSetOfSeeds.newSeeds) {
+                newSeeds = newSetOfSeeds.newSeeds
+            }
         })
     })
 
+
+    
+    console.log('======ANS======')
+    console.log(ans);
+    console.log('===============')
     return ans;
 }
 
+const findLocation = (seed, maps) => {
+    var initialSeeds = [seed];
+    var newSeeds = [];
+    var ans = [];
+   
+    maps.map((map, index) => { 
+        var seeds = index === 0 ? initialSeeds : newSeeds;
+        var noMatch;
+        console.log('----------------------------------------------------')
+        console.log('MAP' + (index + 1))
+        console.log('SEEDS : ' + JSON.stringify(seeds));
+        console.log('----------------------------------------------------')
 
-const inputMaps = input.split(`\n\n`);
+        seeds.map(seed => {
+            // Seed is in the range
+            const {min, max} = findMapRange(map);
+            if ((seed.min < min && seed.max < min) || (seed.min > max && seed.max > max)) {
+                // no match
+                console.log('NO MATCH')
+                noMatch = seed;
+            } else {
+                console.log(seed);
+                console.log('loop throues mgh each ranges to find the match')
+                const neww = getNewSeeds(seed, map);
+                newSeeds = neww;
+                
+                
+                if(noMatch && newSeeds.indexOf(noMatch) === -1) 
+                {
+                    newSeeds.push(noMatch);
+                    noMatch = null;
+                }
+                
+                // newSeeds = [...neww];
+                console.log(newSeeds)
+                console.log('Update the range')
+            }
+        })
+
+        console.log(newSeeds)
+
+ 
+    })
+
+    console.log('-----------------------OVER------------------------')
+    return 0;
+}
+
+
+const inputMaps = smallInput.split(`\n\n`);
 const seeds = simplifySeeds(inputMaps[0]);
 const maps = inputMaps.splice(1).map(input => simplifyMaps(input));
-var finalAns = [];
+const ansList = [];
+
 seeds.map(seed => {
-    const ans = findLocation(seed, maps);
-    finalAns.push(...ans);
+    ansList.push(findLocation(seed, maps));
 })
-
-var realFinalAns = [];
-finalAns.forEach(ans => {
-    realFinalAns.push(ans.min);
-})
-
-realFinalAns = realFinalAns.filter(an => an !== 0);
-
-console.log(Math.min(...realFinalAns))
