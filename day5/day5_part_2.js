@@ -227,195 +227,74 @@ const simplifyMaps = (str) => {
     const numberArray = str.replace(/.+:\s+/g, '').split(/\s+/).map(num => Number(num));
     var listOfArrays = [];
     var subArray = [];
-    var ans = [];
 
     numberArray.forEach((item, index) => {
         if((index + 1) % 3 === 0) {
-            subArray.push(item);
+            subArray.push(item)
             listOfArrays.push(subArray);
             subArray = [];
         } else {
-            subArray.push(item);
+            subArray.push(item)
         }
     })
-
-    listOfArrays.map(arr => {
-        ans.push({
-            min: arr[1],
-            max: arr[1] + arr[2] - 1,
-            diff: arr[0] - arr[1],
-        })
-    });
-
-    return ans.sort((a, b) => a.min - b.min);;
+    
+    return listOfArrays;
 }
 
 const simplifySeeds = (str) => {
-    const seeds = str.replace(/.+:\s+/g, '').split(/\s+/).map(num => Number(num));
-    const newSeeds = [];
-    for(var i = 0; i < seeds.length; i = i + 2) {
-        newSeeds.push({
-            min: seeds[i],
-            max: seeds[i] + seeds[i+1] - 1
-        })
-    }
-
-    return newSeeds;
+    const seeds = str.replace(/.+:\s+/g, '').split(/\s+/).map(num => Number(num));;
+    return seeds;
 }
 
-const findMapRange = (map) => {
-    const minList = map.map(range => range.min);
-    const maxList = map.map(range => range.max);
-    return {
-        min: Math.min(...minList),
-        max: Math.max(...maxList)
+const findDestintation = (seed, map) => {
+    for(const input of map) {
+        const start = input[1];
+        const end = input[0];
+        const range = input[2];
+        if(seed >= start && seed <= start + range) {
+            return seed + end - start;
+        }
     }
+
+    return seed;
 }
+const findLocation = (seeds, maps) => {
+    maps.forEach(map => {
+        
+        while(seeds) {
+            const seed = seeds.pop()
+            const start = seed[0];
+            const end = seed[1];
+            let newSeeds = [];
+            map.forEach(range => {
+                const destinationStart = range[0];
+                const seedStart = range[1];
+                const diff = range[2];
 
-const getNewSeed = (seed, range, min, max) => {
-    var ans = [];
-    var newSeeds = [];
-
-    if(seed.min < range.min && seed.max >= range.min && seed.max <= range.max) {
-        // left stretched out
-        console.log(range)
-        console.log('left stretched out')
-        ans.push({
-            min: range.min + range.diff,
-            max: seed.max + range.diff
-        });
-        newSeeds.push({
-            min: seed.min,
-            max: range.min - 1
-        })
-    } else if(seed.min >= range.min && seed.min <= range.max && seed.max > range.max) {
-        // right stretched out
-        console.log(range)
-        console.log('right stretched out')
-        ans.push({
-            min: seed.min + range.diff,
-            max: range.max + range.diff
-        });
-        newSeeds.push({
-            min: range.max + 1,
-            max: seed.max
-        })
-    } else if(seed.min >= range.min && seed.max <= range.max) {
-        // within the range
-        console.log(range)
-        console.log('within the range')
-        ans.push({
-            min: seed.min + range.diff,
-            max: seed.max + range.diff
-        })
-    } else if(seed.min < range.min && seed.max > range.max) {
-        // bigger than range
-        console.log(range)
-        console.log('----bigger than range')
-        ans.push({
-            min: range.min + range.diff,
-            max: range.max + range.diff
-        })
-        newSeeds.push({
-            min: seed.min,
-            max: range.min - 1
-        }, {
-            min: range.max + 1,
-            max: seed.max
-        })
-    } else {
-        console.log(range)
-        newSeeds.push(seed)
-        console.log('no match')
-    }
-
-    return {
-        ans, newSeeds
-    }
-
-}
-
-const getNewSeeds = (seedToStart, ranges) => {
-    var ans = [];
-    var seeds = [seedToStart]
-    var newSeeds = [];
-    const {min, max} = findMapRange(ranges);
-
-    ranges.map((range, index) => {
-        seeds = index === 0 ? seeds : newSeeds;
-        seeds.map(seed => {
-            const newSetOfSeeds = getNewSeed(seed, range, min, max);
-            if(newSetOfSeeds.ans) {
-                ans.push(...newSetOfSeeds.ans)
-            }
-            if(newSetOfSeeds.newSeeds) {
-                newSeeds = newSetOfSeeds.newSeeds
-            }
-        })
+                newStart = Math.max(start, seedStart);
+                newEnd = Math.min(end, seedStart + diff);
+                if(newStart < newEnd) {
+                    newSeeds.push([newStart - seedStart + destinationStart, newEnd - seedStart + destinationStart])
+                }
+                console.log(seed)
+                console.log(range)
+            })
+            console.log('------SEED COMPLETED------')
+        }
+        console.log('------MAP COMPLETED------');
     })
-
 
     
-    console.log('======ANS======')
-    console.log(ans);
-    console.log('===============')
-    return ans;
-}
-
-const findLocation = (seed, maps) => {
-    var initialSeeds = [seed];
-    var newSeeds = [];
-    var ans = [];
-   
-    maps.map((map, index) => { 
-        var seeds = index === 0 ? initialSeeds : newSeeds;
-        var noMatch;
-        console.log('----------------------------------------------------')
-        console.log('MAP' + (index + 1))
-        console.log('SEEDS : ' + JSON.stringify(seeds));
-        console.log('----------------------------------------------------')
-
-        seeds.map(seed => {
-            // Seed is in the range
-            const {min, max} = findMapRange(map);
-            if ((seed.min < min && seed.max < min) || (seed.min > max && seed.max > max)) {
-                // no match
-                console.log('NO MATCH')
-                noMatch = seed;
-            } else {
-                console.log(seed);
-                console.log('loop throues mgh each ranges to find the match')
-                const neww = getNewSeeds(seed, map);
-                newSeeds = neww;
-                
-                
-                if(noMatch && newSeeds.indexOf(noMatch) === -1) 
-                {
-                    newSeeds.push(noMatch);
-                    noMatch = null;
-                }
-                
-                // newSeeds = [...neww];
-                console.log(newSeeds)
-                console.log('Update the range')
-            }
-        })
-
-        console.log(newSeeds)
-
- 
-    })
-
-    console.log('-----------------------OVER------------------------')
     return 0;
 }
 
-
 const inputMaps = smallInput.split(`\n\n`);
-const seeds = simplifySeeds(inputMaps[0]);
+const inputs = simplifySeeds(inputMaps[0]);
+const seeds = [];
+for(let i = 0; i < inputs.length; i = i + 2) {
+    seeds.push([inputs[i], inputs[i] + inputs[i+1]])
+}
 const maps = inputMaps.splice(1).map(input => simplifyMaps(input));
-const ansList = [];
 
-seeds.map(seed => {
-    ansList.push(findLocation(seed, maps));
-})
+const ans = findLocation(seeds, maps);
+// console.log(ans);
